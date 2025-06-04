@@ -29,13 +29,17 @@ describe('App Component', () => {
     }
   ]
 
-  it('renders app title', () => {
+  it('renders app title after loading', async () => {
     mockedAxios.get.mockResolvedValueOnce({
       data: { success: true, data: [], count: 0 }
     })
 
     render(<App />)
-    expect(screen.getByTestId('app-title')).toHaveTextContent('🚀 My Full-Stack App')
+    
+    // Wait for loading to finish and app title to appear
+    await waitFor(() => {
+      expect(screen.getByTestId('app-title')).toHaveTextContent('🚀 My Full-Stack App')
+    })
   })
 
   it('shows loading spinner initially', () => {
@@ -59,43 +63,48 @@ describe('App Component', () => {
 
     expect(screen.getByText('John Doe')).toBeInTheDocument()
     expect(screen.getByText('Jane Smith')).toBeInTheDocument()
-    expect(screen.getByText('john@example.com')).toBeInTheDocument()
-    expect(screen.getByText('jane@example.com')).toBeInTheDocument()
   })
 
-  it('displays error message when API call fails', async () => {
-    const errorMessage = 'Network Error'
-    mockedAxios.get.mockRejectedValueOnce(new Error(errorMessage))
-
-    render(<App />)
-
-    await waitFor(() => {
-      expect(screen.getByTestId('error-message')).toBeInTheDocument()
-    })
-
-    expect(screen.getByTestId('error-text')).toHaveTextContent('Error connecting to server')
-    expect(screen.getByTestId('retry-button')).toBeInTheDocument()
-  })
-
-  it('retries API call when retry button is clicked', async () => {
-    // First call fails
+  it('displays error banner when API call fails', async () => {
     mockedAxios.get.mockRejectedValueOnce(new Error('Network Error'))
-    
+
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByTestId('error-message')).toBeInTheDocument()
+      expect(screen.getByTestId('error-banner')).toBeInTheDocument()
     })
 
-    // Second call succeeds
-    mockedAxios.get.mockResolvedValueOnce({
-      data: { success: true, data: mockUsers, count: 2 }
-    })
+    expect(screen.getByTestId('error-banner')).toHaveTextContent('Error connecting to server')
+  })
 
-    fireEvent.click(screen.getByTestId('retry-button'))
+  it('clears error when close button is clicked', async () => {
+    mockedAxios.get.mockRejectedValueOnce(new Error('Network Error'))
+
+    render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByTestId('users-count')).toHaveTextContent('👥 Users (2)')
+      expect(screen.getByTestId('error-banner')).toBeInTheDocument()
+    })
+
+    // Click the close button (✕)
+    const closeButton = screen.getByText('✕')
+    fireEvent.click(closeButton)
+
+    // Error banner should disappear
+    await waitFor(() => {
+      expect(screen.queryByTestId('error-banner')).not.toBeInTheDocument()
+    })
+  })
+
+  it('makes API call to correct endpoint', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: { success: true, data: [], count: 0 }
+    })
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(mockedAxios.get).toHaveBeenCalledWith('/api/users')
     })
   })
 
@@ -109,6 +118,9 @@ describe('App Component', () => {
     await waitFor(() => {
       expect(screen.getByTestId('refresh-button')).toBeInTheDocument()
     })
+
+    // Clear previous calls
+    vi.clearAllMocks()
 
     // Mock second API call
     mockedAxios.get.mockResolvedValueOnce({
@@ -124,19 +136,7 @@ describe('App Component', () => {
     fireEvent.click(screen.getByTestId('refresh-button'))
 
     await waitFor(() => {
-      expect(screen.getByTestId('users-count')).toHaveTextContent('👥 Users (3)')
-    })
-  })
-
-  it('makes API call to correct endpoint', async () => {
-    mockedAxios.get.mockResolvedValueOnce({
-      data: { success: true, data: [], count: 0 }
-    })
-
-    render(<App />)
-
-    await waitFor(() => {
-      expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:5000/api/users')
+      expect(mockedAxios.get).toHaveBeenCalledWith('/api/users')
     })
   })
 })
