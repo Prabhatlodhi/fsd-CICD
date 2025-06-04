@@ -69,7 +69,7 @@ function App() {
 	return (
 		<div className="app" data-testid="app">
 			<header className="app-header">
-				<h1 data-testid="app-title">🚀 My Full-Stack App</h1>
+				<h1 data-testid="app-title">🚀 My Full-Stack Application Pract</h1>
 				<p>React + Node.js + MongoDB</p>
 			</header>
 
